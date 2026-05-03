@@ -8,6 +8,7 @@ default:
 
 import-json:
     python json2csv.py "{{JSON}}" "{{CSV}}"
+    # jq -r -f json2csv.jq "{{JSON}}" > "{{CSV}}"
 
 # import-csv:
 #     rm -f "{{DB}}"
