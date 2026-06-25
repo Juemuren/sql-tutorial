@@ -1,5 +1,7 @@
+DROP TABLE IF EXISTS chips_db.chips;
+
 -- 创建表
-CREATE TABLE IF NOT EXISTS chips (
+CREATE TABLE chips_db.chips (
     职业 TEXT NOT NULL,
     芯片类型 TEXT NOT NULL,
     数量 INTEGER NOT NULL,
@@ -7,5 +9,9 @@ CREATE TABLE IF NOT EXISTS chips (
 );
 
 -- 导入 CSV 数据
-.mode csv
-.import --skip 1 chips.csv chips
+INSERT INTO chips_db.chips
+SELECT
+    "职业"::TEXT AS "职业",
+    "芯片类型"::TEXT AS "芯片类型",
+    "数量"::INTEGER AS "数量"
+FROM file;

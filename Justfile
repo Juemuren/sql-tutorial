@@ -1,4 +1,4 @@
-# DB := "chips.db"
+DB := "chips.db"
 CSV := "chips.csv"
 DEPOT_JSON := "depot.json"
 DEPOT_CSV := "depot.csv"
@@ -13,15 +13,11 @@ convert-depot-json:
 convert-depot-csv:
     duckdb -csv -f depot2chips.sql "{{DEPOT_CSV}}" > "{{CSV}}"
 
-# import-csv:
-#     rm -f "{{DB}}"
-#     sqlite3 "{{DB}}" < chips_import.sql
+import-csv:
+    duckdb "{{CSV}}" -cmd "ATTACH '{{DB}}' AS chips_db" -f chips_import.sql
 
-# export-csv:
-#     sqlite3 -header -csv "{{DB}}" "SELECT * FROM chips" > "{{CSV}}"
-
-# query:
-#     sqlite3 "{{DB}}" < chips_query.sql
+export-csv:
+    duckdb -csv "{{DB}}" -c "SELECT * FROM chips" > "{{CSV}}"
 
 # update job type increment:
 #     sqlite3 "{{DB}}" "UPDATE chips SET 数量 = 数量 {{increment}} WHERE 职业 = '{{job}}' AND 芯片类型 = '{{type}}'"
