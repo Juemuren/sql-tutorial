@@ -13,15 +13,15 @@ convert-depot-json:
 convert-depot-csv:
     duckdb -csv -f depot2chips.sql "{{DEPOT_CSV}}" > "{{CSV}}"
 
-import-csv:
+import-db:
     duckdb "{{CSV}}" -cmd "ATTACH '{{DB}}' AS chips_db" -f chips_import.sql
 
-export-csv:
+export-db:
     duckdb -csv "{{DB}}" -c "SELECT * FROM chips" > "{{CSV}}"
 
-# update job type increment:
-#     sqlite3 "{{DB}}" "UPDATE chips SET 数量 = 数量 {{increment}} WHERE 职业 = '{{job}}' AND 芯片类型 = '{{type}}'"
-#     sqlite3 "{{DB}}" "SELECT * FROM chips WHERE 职业 = '{{job}}' AND 芯片类型 = '{{type}}'"
+update-db job type increment:
+    duckdb "{{DB}}" -c "UPDATE chips SET 数量 = 数量 + {{increment}} WHERE 职业 = '{{job}}' AND 芯片类型 = '{{type}}'"
+    duckdb "{{DB}}" -c "SELECT * FROM chips WHERE 职业 = '{{job}}' AND 芯片类型 = '{{type}}'"
 
 group-query:
     duckdb "{{CSV}}" -f group_query.sql
