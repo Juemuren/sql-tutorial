@@ -8,7 +8,7 @@ CREATE TABLE chips_db.chips (
     UNIQUE(职业, 芯片类型)
 );
 
--- 导入 CSV 数据
+-- 导入数据
 INSERT INTO chips_db.chips
 SELECT
     "职业"::TEXT AS "职业",
