@@ -1,14 +1,17 @@
 # DB := "chips.db"
 CSV := "chips.csv"
-JSON := "depot.json"
+DEPOT_JSON := "depot.json"
+DEPOT_CSV := "depot.csv"
 
 [default]
 default:
     @just --list
 
-import-json:
-    python json2csv.py "{{JSON}}" "{{CSV}}"
-    # jq -r -f json2csv.jq "{{JSON}}" > "{{CSV}}"
+convert-depot-json:
+    jq -r -f json2csv.jq "{{DEPOT_JSON}}" > "{{CSV}}"
+
+convert-depot-csv:
+    duckdb -csv -f depot2chips.sql "{{DEPOT_CSV}}" > "{{CSV}}"
 
 # import-csv:
 #     rm -f "{{DB}}"
