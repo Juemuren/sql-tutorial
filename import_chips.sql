@@ -5,7 +5,7 @@ CREATE TABLE chips_db.chips (
     职业 TEXT NOT NULL,
     芯片类型 TEXT NOT NULL,
     数量 INTEGER NOT NULL,
-    UNIQUE(职业, 芯片类型)
+    UNIQUE (职业, 芯片类型)
 );
 
 -- 导入数据
