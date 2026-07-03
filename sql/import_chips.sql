@@ -11,7 +11,7 @@ CREATE TABLE db.chips (
 -- 导入数据
 INSERT INTO db.chips
 SELECT
-    "职业"::TEXT AS "职业",
-    "芯片类型"::TEXT AS "芯片类型",
-    "数量"::INTEGER AS "数量"
+    "职业"::TEXT AS 职业,
+    "芯片类型"::TEXT AS 芯片类型,
+    "数量"::INTEGER AS 数量
 FROM file;
