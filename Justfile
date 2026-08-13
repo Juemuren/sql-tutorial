@@ -62,10 +62,6 @@ update-chips prof chip_type increment:
         -cmd "SET VARIABLE chip_type = '{{ chip_type }}'" \
         -cmd "SET VARIABLE increment = {{ increment }}" \
         -f sql/update_chips.sql
-    duckdb "{{ DB }}" \
-        -cmd "SET VARIABLE prof = '{{ prof }}'" \
-        -cmd "SET VARIABLE chip_type = '{{ chip_type }}'" \
-        -f sql/query_chips.sql
 
 # 在 DB 上查询原始芯片数据
 query-raw-chips-db chip_type:
