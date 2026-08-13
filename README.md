@@ -240,8 +240,6 @@ duckdb data/chips.csv -c "SELECT * FROM file WHERE chip_type = '大'"
 
 ### CSV 导入 DB
 
-<!-- TODO 修改 -->
-
 CSV 数据也可以导入数据库。完整的操作为，先读取 CSV 文件，然后挂载数据库，最后执行脚本
 
 ```sh
@@ -286,7 +284,9 @@ duckdb data/chips.csv \
 DROP TABLE IF EXISTS db.chips;
 ```
 
-不过这么做有一点风险：如果数据库中的数据已经被更新但还未导出，那么再次导入时这些数据就丢失了。不过我们始终将 CSV 作为权威数据源，而 DB 只是临时数据，所以这么做是合适的。
+不过这么做有一点风险：如果数据库中的数据已经被更新但还未导出，那么再次导入时这些数据就丢失了。
+
+另外，同一个数据库里可以存在多张表。比如可以把 `data/depot.csv` 也导入数据库，方法是完全一样的——只要表名不重复就行。
 
 ### DB 导出 CSV
 
@@ -300,6 +300,15 @@ duckdb data/data.db -c "SELECT * FROM chips"
 
 ```sh
 duckdb data/data.db --csv -c "SELECT * FROM chips" > data/chips.csv
+```
+
+另外，如果 SQL 脚本中已经硬编码了 `FROM file`，但希望复用相同的查询逻辑，那么可以通过 `CREATE TEMP VIEW file AS SELECT * FROM chips` 从 `chips` 表中创建一个名为 `file` 的临时视图，并通过 `-cmd` 参数让其在执行查询前先运行
+
+```sh
+duckdb data/data.db \
+    -cmd "CREATE TEMP VIEW file AS SELECT * FROM chips" \
+    -cmd "SET VARIABLE chip_type = '大'" \
+    -f sql/query_group_chips.sql
 ```
 
 ## 更新
