@@ -6,11 +6,18 @@ DEPOT_CSV := "data/depot.csv"
 default:
     @just --list
 
-# 预览数据
+# 简单查询
 preview-depot num="10":
     duckdb "{{ DEPOT_CSV }}" \
         -cmd "SET VARIABLE num = {{ num }}" \
         -f sql/preview_depot.sql
+
+# 过滤和排序
+query-chips filter sort="ASC":
+    duckdb "{{ DEPOT_CSV }}" \
+        -cmd "SET VARIABLE filter = '{{ filter }}'" \
+        -cmd "SET default_order = '{{ sort }}'" \
+        -f sql/query_chips.sql
 
 # 提取芯片数据
 extract-chips:
