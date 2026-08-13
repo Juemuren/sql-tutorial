@@ -48,8 +48,8 @@ chip_map AS (
 )
 
 SELECT
-    prof_order.prof AS prof,
-    type_order.chip_type AS chip_type,
+    prof_order.prof,
+    type_order.chip_type,
     coalesce(chip_map.count, 0)::INTEGER AS count
 FROM prof_order
 CROSS JOIN type_order
