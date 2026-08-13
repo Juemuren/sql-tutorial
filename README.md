@@ -10,7 +10,9 @@
 - [过滤和排序](#过滤和排序)
 - [脚本和变量](#脚本和变量)
 - [导入和导出](#导入和导出)
-- [更新和转换](#更新和转换)
+- [更新](#更新)
+- [复杂查询](#复杂查询)
+- [数据转换](#数据转换)
 
 本文使用的操作都在 [Justfile](Justfile) 中提供了对应的快捷命令。
 
@@ -236,28 +238,11 @@ duckdb data/depot.csv --csv -f sql/extract_chips.sql > data/chips.csv
 duckdb data/chips.csv -c "SELECT * FROM file WHERE chip_type = '大'"
 ```
 
-过滤条件可以进行组合
-
-```sql
-WHERE prof = '先锋' AND chip_type = '小'
-```
-
-效果是选取先锋的小芯片
-
-```sh
-duckdb data/chips.csv -c "SELECT * FROM file WHERE prof = '先锋' AND chip_type = '小'"
-```
-
 ### CSV 导入 DB
 
-DuckDB 不方便直接在 CSV 文件上进行更新
+<!-- TODO 修改 -->
 
-1. 一种方法是，先读 CSV 文件，然后把更新结果写入临时文件中，最后再进行覆盖
-2. 另一种方式是，先将 CSV 文件导入 DuckDB 数据库，然后在数据库里进行更新，最后再把数据库中的数据导出为 CSV 文件
-
-这里采用第二种方式。
-
-完整的导入操作为，先读取 CSV 文件，然后挂载数据库，最后执行脚本
+CSV 数据也可以导入数据库。完整的操作为，先读取 CSV 文件，然后挂载数据库，最后执行脚本
 
 ```sh
 duckdb data/chips.csv \
@@ -267,7 +252,7 @@ duckdb data/chips.csv \
 
 其中 `ATTACH 'data/data.db'` 使我们接下来可以操作 `data/data.db` 数据库，而 `AS db` 则给该数据库定义了一个便于使用的别名。
 
-而 [sql/import_chips.sql](sql/import_chips.sql) 主要完成两件事
+而脚本主要做两件事
 
 1. 使用 `CREATE TABLE` 创建表
 
@@ -317,11 +302,16 @@ duckdb data/data.db -c "SELECT * FROM chips"
 duckdb data/data.db --csv -c "SELECT * FROM chips" > data/chips.csv
 ```
 
-## 更新和转换
+## 更新
 
-### 更新
+DuckDB 不方便直接在 CSV 文件上进行更新，因为一边读文件一边写文件会遇到一些问题。主要有两种解决方式
 
-使用 `UPDATE` 更新数据
+1. 先读 CSV 文件，然后把更新结果写入另一个 CSV 文件，最后再进行覆盖
+2. 先将 CSV 文件导入 DuckDB 数据库，然后在数据库里进行更新，最后再把数据库中的数据导出为 CSV 文件
+
+我们采用第二种方式（此前学习如何将 CSV 导入数据库就是为了讲解第二种方式的）。
+
+更新使用 `UPDATE`
 
 ```sql
 UPDATE chips
@@ -332,9 +322,14 @@ WHERE
 RETURNING *;
 ```
 
-其中 `UPDATE chips` 表示更新 `chips` 表；`SET count = count + 2` 表示在原有数量上 `+2`；`RETURNING` 是 DuckDB 还提供扩展功能，可用于返回被更新的数据，便于确认结果。
+其中
 
-为了让脚本可以用于不同的职业、芯片类型和数量，[sql/update_chips.sql](sql/update_chips.sql) 使用变量代替了那些硬编码的值
+- `UPDATE chips` 表示更新 `chips` 表
+- `SET count = count + 2` 表示在原有数量上 `+2`
+- `WHERE prof = '先锋' AND chip_type = '小'` 表示选取同时满足 `prof = '先锋'` 和 `chip_type = '小'` 的条目
+- `RETURNING` 是 DuckDB 提供的扩展功能，可用于返回被更新的数据，便于确认结果
+
+为了让脚本便于应用在不同的职业、芯片类型和数量上，我们可以使用变量代替那些硬编码的值
 
 ```sql
 UPDATE chips
@@ -345,7 +340,7 @@ WHERE
 RETURNING *;
 ```
 
-使用时同样要先通过 `-cmd` 定义变量
+执行脚本前同样要先通过 `-cmd` 定义变量
 
 ```sh
 duckdb data/data.db \
@@ -357,11 +352,27 @@ duckdb data/data.db \
 
 `increment` 可以是负数，`+-3` 会被正确处理为 `-3`。不过目前表中没有限制 `count` 必须大于等于 `0`，因此更新后的值可能出现负数。
 
-### 转换
+## 复杂查询
+
+<!-- TODO 补完整 -->
+
+过滤条件可以进行组合
+
+```sql
+WHERE prof = '先锋' AND chip_type = '小'
+```
+
+效果是选取先锋的小芯片
+
+```sh
+duckdb data/chips.csv -c "SELECT * FROM file WHERE prof = '先锋' AND chip_type = '小'"
+```
+
+## 数据转换
 
 现在回到之前留下的 [sql/extract_chips.sql](sql/extract_chips.sql)。这个脚本把原始仓库数据转换成每个职业的小芯片、大芯片和双芯片数据。总流程可以分为三步。
 
-#### 定义公用表表达式
+### 定义公用表表达式
 
 首先定义所有职业以及芯片类型
 
@@ -395,7 +406,7 @@ chip_types (chip_type, name_suffix, type_sort) AS (
 - `VALUES` 用于从显式给出的数据行中构造查询结果
 - `AS` 用于关联公用表表达式的名称、列名和定义它的查询
 
-#### 计算笛卡尔积
+### 计算笛卡尔积
 
 接下来生成所有职业和芯片类型的组合
 
@@ -406,7 +417,7 @@ CROSS JOIN chip_types
 
 `FROM profs CROSS JOIN chip_types` 会计算笛卡尔积，即把每种职业和每种芯片类型进行组合。`8` 种职业乘以 `3` 种芯片类型，一共得到 `24` 条数据。
 
-#### 相关标量子查询
+### 相关标量子查询
 
 最后查询仓库中对应的物品数量，并按之前定义的顺序进行排序
 
