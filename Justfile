@@ -40,17 +40,6 @@ query-group-chips type:
 query-shortage-chips:
     duckdb "{{ CHIPS_CSV }}" -f sql/query_shortage_chips.sql
 
-# 导入仓库数据
-import-depot:
-    duckdb "{{ DEPOT_CSV }}" \
-        -cmd "ATTACH '{{ DB }}' AS db" \
-        -f sql/import_depot.sql
-
-# 导出仓库数据
-export-depot:
-    duckdb "{{ DB }}" -csv \
-        -f sql/export_depot.sql > "{{ DEPOT_CSV }}"
-
 # 导入芯片数据
 import-chips:
     duckdb "{{ CHIPS_CSV }}" \
