@@ -25,7 +25,7 @@ LEFT JOIN file
 SELECT
     profs.prof,
     chip_types.chip_type,
-    coalesce(max(file."Count"::INTEGER), 0)::INTEGER AS count
+    coalesce(max(file."Count"), 0) AS count
 GROUP BY
     profs.prof_sort,
     profs.prof,

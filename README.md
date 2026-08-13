@@ -358,3 +358,79 @@ duckdb data/data.db \
 `increment` 可以是负数，`+-3` 会被正确处理为 `-3`。不过目前表中没有限制 `count` 必须大于等于 `0`，因此更新后的值可能出现负数。
 
 ### 转换
+
+现在回到之前留下的 [sql/extract_chips.sql](sql/extract_chips.sql)。这个脚本把原始仓库数据转换成每个职业的小芯片、大芯片和双芯片数据。总流程可以分为三步。
+
+#### 定义公用表表达式
+
+首先定义所有职业以及芯片类型
+
+```sql
+WITH
+profs (prof, prof_sort) AS (
+    VALUES
+    ('先锋', 1),
+    ('辅助', 2),
+    ('狙击', 3),
+    ('术师', 4),
+    ('近卫', 5),
+    ('特种', 6),
+    ('重装', 7),
+    ('医疗', 8)
+),
+
+chip_types (chip_type, name_suffix, type_sort) AS (
+    VALUES
+    ('小', '芯片', 1),
+    ('大', '芯片组', 2),
+    ('双', '双芯片', 3)
+)
+```
+
+`profs` 定义了各职业的职业名及其顺序；`chip_types` 除了定义各芯片类型的类型名和顺序外，还定义了每种芯片在仓库物品名称中对应的后缀。
+
+这里用到的关键字有
+
+- `WITH` 用于定义只在当前语句中使用的公用表表达式，多个表达式之间使用逗号分隔。
+- `VALUES` 用于从显式给出的数据行中创建一张临时表
+- `AS` 用于将表名和列名绑定到临时表上
+
+#### 生成组合并关联数据
+
+接下来生成职业和芯片类型的所有组合，再根据完整的物品名称关联仓库数据
+
+```sql
+FROM profs
+CROSS JOIN chip_types
+LEFT JOIN file
+    ON file."Name" = profs.prof || chip_types.name_suffix
+```
+
+其中
+
+- `FROM profs CROSS JOIN chip_types` 会把每个职业和每种芯片类型进行组合，即笛卡尔积。`8` 种职业乘以 `3` 种芯片类型，一共得到 `24` 条数据
+- `LEFT JOIN file ON file."Name" = profs.prof || chip_types.name_suffix` 用于将数据关联到名称匹配的 `file` 表行，其中 `||` 用于连接两个字符串。并且，即使部分组合无法在 `file` 表中找到记录，`LEFT JOIN` 也会让左侧生成的所有组合被保留，此时 `file."Count"` 为 `NULL`。
+
+#### 整理数量并分组排序
+
+最后选择需要输出的字段，并对结果进行分组、补零和排序
+
+```sql
+SELECT
+    profs.prof,
+    chip_types.chip_type,
+    coalesce(max(file."Count"), 0) AS count
+GROUP BY
+    profs.prof_sort,
+    profs.prof,
+    chip_types.type_sort,
+    chip_types.chip_type
+ORDER BY profs.prof_sort, chip_types.type_sort;
+```
+
+对于 `coalesce(max(file."Count"), 0) AS count` 语句
+
+- `max()` 会保留最大值。因此，如果仓库中存在同名记录，会取 `file."Count"` 中的最大值；如果需要累加，可以改为 `sum()`。对于仓库中不存在的物品，`max(...)` 的结果仍然为 `NULL`
+- `coalesce()` 从左到右返回第一个不是 `NULL` 的值。这样 `max()` 返回的 `NULL` 就被 `coalesce(..., 0)` 替换为了 `0`
+
+而 `GROUP BY` 按职业和芯片类型分组，使每种职业和芯片类型只输出一行；而重复记录已由 `max()` 等聚合函数处理为一条记录。
