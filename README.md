@@ -10,7 +10,7 @@
 - [过滤和排序](#过滤和排序)
 - [脚本和变量](#脚本和变量)
 - [导入和导出](#导入和导出)
-- [更新数据](#更新数据)
+- [更新和转换](#更新和转换)
 
 本文使用的操作都在 [Justfile](Justfile) 中提供了对应的快捷命令。
 
@@ -236,6 +236,18 @@ duckdb data/depot.csv --csv -f sql/extract_chips.sql > data/chips.csv
 duckdb data/chips.csv -c "SELECT * FROM file WHERE chip_type = '大'"
 ```
 
+过滤条件可以进行组合
+
+```sql
+WHERE prof = '先锋' AND chip_type = '小'
+```
+
+效果是选取先锋的小芯片
+
+```sh
+duckdb data/chips.csv -c "SELECT * FROM file WHERE prof = '先锋' AND chip_type = '小'"
+```
+
 ### CSV 导入 DB
 
 DuckDB 不方便直接在 CSV 文件上进行更新
@@ -305,4 +317,44 @@ duckdb data/data.db -c "SELECT * FROM chips"
 duckdb data/data.db --csv -c "SELECT * FROM chips" > data/chips.csv
 ```
 
-## 更新数据
+## 更新和转换
+
+### 更新
+
+使用 `UPDATE` 更新数据
+
+```sql
+UPDATE chips
+SET count = count + 2
+WHERE
+    prof = '先锋'
+    AND chip_type = '小'
+RETURNING *;
+```
+
+其中 `UPDATE chips` 表示更新 `chips` 表；`SET count = count + 2` 表示在原有数量上 `+2`；`RETURNING` 是 DuckDB 还提供扩展功能，可用于返回被更新的数据，便于确认结果。
+
+为了让脚本可以用于不同的职业、芯片类型和数量，[sql/update_chips.sql](sql/update_chips.sql) 使用变量代替了那些硬编码的值
+
+```sql
+UPDATE chips
+SET count = count + getvariable('increment')
+WHERE
+    prof = getvariable('prof')
+    AND chip_type = getvariable('chip_type')
+RETURNING *;
+```
+
+使用时同样要先通过 `-cmd` 定义变量
+
+```sh
+duckdb data/data.db \
+    -cmd "SET VARIABLE prof = '先锋'" \
+    -cmd "SET VARIABLE chip_type = '小'" \
+    -cmd "SET VARIABLE increment = -3" \
+    -f sql/update_chips.sql
+```
+
+`increment` 可以是负数，`+-3` 会被正确处理为 `-3`。不过目前表中没有限制 `count` 必须大于等于 `0`，因此更新后的值可能出现负数。
+
+### 转换
