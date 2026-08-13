@@ -18,17 +18,17 @@ chip_types (chip_type, name_suffix, type_sort) AS (
     ('双', '双芯片', 3)
 )
 
-FROM profs
-CROSS JOIN chip_types
-LEFT JOIN file
-    ON file."Name" = profs.prof || chip_types.name_suffix
 SELECT
     profs.prof,
     chip_types.chip_type,
-    coalesce(max(file."Count"), 0) AS count
-GROUP BY
-    profs.prof_sort,
-    profs.prof,
-    chip_types.type_sort,
-    chip_types.chip_type
+    coalesce(
+        (
+            SELECT file."Count"
+            FROM file
+            WHERE file."Name" = profs.prof || chip_types.name_suffix
+        ),
+        0
+    ) AS count
+FROM profs
+CROSS JOIN chip_types
 ORDER BY profs.prof_sort, chip_types.type_sort;
