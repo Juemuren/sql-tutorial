@@ -9,9 +9,9 @@ CREATE TABLE db.depot (
 );
 
 -- 导入数据
-INSERT INTO db.depot
+INSERT INTO db.depot (id, name, count)
 SELECT
-    "ID"::TEXT AS id,
-    "Name"::TEXT AS name,
-    "Count"::INTEGER AS count
+    "ID"::TEXT,
+    "Name"::TEXT,
+    "Count"::INTEGER
 FROM file;

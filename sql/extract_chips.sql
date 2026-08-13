@@ -48,9 +48,9 @@ chip_map AS (
 )
 
 SELECT
-    prof_order.prof AS "职业",
-    type_order.chip_type AS "芯片类型",
-    coalesce(chip_map.count, 0)::INTEGER AS "数量"
+    prof_order.prof AS prof,
+    type_order.chip_type AS chip_type,
+    coalesce(chip_map.count, 0)::INTEGER AS count
 FROM prof_order
 CROSS JOIN type_order
 LEFT JOIN chip_map

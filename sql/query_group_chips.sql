@@ -1,13 +1,13 @@
 SELECT
-    芯片类型,
+    chip_type,
     CASE
-        WHEN 职业 IN ('先锋', '辅助') THEN '先锋 + 辅助'
-        WHEN 职业 IN ('狙击', '术师') THEN '狙击 + 术师'
-        WHEN 职业 IN ('近卫', '特种') THEN '近卫 + 特种'
-        WHEN 职业 IN ('重装', '医疗') THEN '重装 + 医疗'
-    END AS 组合,
-    SUM(数量) AS 总数
+        WHEN prof IN ('先锋', '辅助') THEN '先锋 + 辅助'
+        WHEN prof IN ('狙击', '术师') THEN '狙击 + 术师'
+        WHEN prof IN ('近卫', '特种') THEN '近卫 + 特种'
+        WHEN prof IN ('重装', '医疗') THEN '重装 + 医疗'
+    END AS prof_group,
+    SUM(count) AS group_count
 FROM file
-WHERE "芯片类型" = getvariable('chip_type')
-GROUP BY 组合, 芯片类型
-ORDER BY 总数 DESC;
+WHERE chip_type = getvariable('chip_type')
+GROUP BY prof_group, chip_type
+ORDER BY group_count DESC;

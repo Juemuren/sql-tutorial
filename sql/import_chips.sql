@@ -2,16 +2,16 @@ DROP TABLE IF EXISTS db.chips;
 
 -- 创建表
 CREATE TABLE db.chips (
-    "职业" TEXT NOT NULL,
-    "芯片类型" TEXT NOT NULL,
-    "数量" INTEGER NOT NULL,
-    UNIQUE ("职业", "芯片类型")
+    prof TEXT NOT NULL,
+    chip_type TEXT NOT NULL,
+    count INTEGER NOT NULL,
+    UNIQUE (prof, chip_type)
 );
 
 -- 导入数据
-INSERT INTO db.chips
+INSERT INTO db.chips (prof, chip_type, count)
 SELECT
-    "职业"::TEXT AS "职业",
-    "芯片类型"::TEXT AS "芯片类型",
-    "数量"::INTEGER AS "数量"
+    prof::TEXT,
+    chip_type::TEXT,
+    count::INTEGER
 FROM file;

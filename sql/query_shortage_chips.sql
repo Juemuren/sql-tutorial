@@ -1,7 +1,7 @@
 SELECT *
 FROM file
 WHERE
-    ("芯片类型" = '小' AND "数量" < 5)
+    (chip_type = '小' AND count < 5)
     OR
-    ("芯片类型" = '大' AND "数量" < 8)
-ORDER BY "数量" DESC;
+    (chip_type = '大' AND count < 8)
+ORDER BY count DESC;
