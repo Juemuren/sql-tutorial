@@ -1,3 +1,3 @@
 SELECT *
 FROM file
-LIMIT getvariable('row_limit');
+LIMIT getvariable('num');

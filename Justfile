@@ -7,9 +7,9 @@ default:
     @just --list
 
 # 预览数据
-preview-depot limit="10":
+preview-depot num="10":
     duckdb "{{ DEPOT_CSV }}" \
-        -cmd "SET VARIABLE row_limit = {{ limit }}" \
+        -cmd "SET VARIABLE num = {{ num }}" \
         -f sql/preview_depot.sql
 
 # 提取芯片数据
