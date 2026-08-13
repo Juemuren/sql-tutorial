@@ -12,6 +12,8 @@
 - [导入和导出](#导入和导出)
 - [更新数据](#更新数据)
 
+本文使用的操作都在 [Justfile](Justfile) 中提供了对应的快捷命令。
+
 ## 数据准备
 
 数据源于《明日方舟》的仓库，使用 MAA 的 `小工具 > 仓库识别` 功能将仓库中的数据导出为 CSV 文件。
@@ -202,5 +204,105 @@ duckdb --csv -c "SELECT * FROM duckdb_settings()" > duckdb.csv
 这就是之后要提到的导入和导出功能。
 
 ## 导入和导出
+
+### CSV 导出 CSV
+
+之前我们一直在 `data/depot.csv` 上查询，每次都得进行过滤。其实我们也可以把需要的数据导出到另一个文件中，从而方便后续的查询。
+
+游戏内有八种职业，分别为 `先锋`、`辅助`、`狙击`、`术师`、`近卫`、`特种`、`重装`、`医疗`；每种职业又有三种芯片，分别为 `xx芯片`、`xx芯片组`、`xx双芯片`（后文将其简称为小芯片、大芯片、双芯片）。因此，我们的目标是把芯片数据导出为如下的 CSV 格式
+
+```csv
+prof,chip_type,count
+"先锋","小",5
+"先锋","大",3
+"先锋","双",0
+"辅助","小",22
+"辅助","大",13
+"辅助","双",0
+...
+```
+
+提取和整理芯片数据的脚本保存在 [sql/extract_chips.sql](sql/extract_chips.sql) 中。该脚本较为复杂，后续再深入研究。
+
+使用 `--csv` 让 DuckDB 以 CSV 格式输出查询结果，再使用 Shell 的 `>` 将输出重定向到文件
+
+```sh
+duckdb data/depot.csv --csv -f sql/extract_chips.sql > data/chips.csv
+```
+
+在该文件上的查询就不再需要使用 `WHERE name LIKE '%芯片组'` 去匹配字符串了，我们可以使用语义更清晰的 `WHERE chip_type = '大'` 进行过滤
+
+```sh
+duckdb data/chips.csv -c "SELECT * FROM file WHERE chip_type = '大'"
+```
+
+### CSV 导入 DB
+
+DuckDB 不方便直接在 CSV 文件上进行更新
+
+1. 一种方法是，先读 CSV 文件，然后把更新结果写入临时文件中，最后再进行覆盖
+2. 另一种方式是，先将 CSV 文件导入 DuckDB 数据库，然后在数据库里进行更新，最后再把数据库中的数据导出为 CSV 文件
+
+这里采用第二种方式。
+
+完整的导入操作为，先读取 CSV 文件，然后挂载数据库，最后执行脚本
+
+```sh
+duckdb data/chips.csv \
+    -cmd "ATTACH 'data/data.db' AS db" \
+    -f sql/import_chips.sql
+```
+
+其中 `ATTACH 'data/data.db'` 使我们接下来可以操作 `data/data.db` 数据库，而 `AS db` 则给该数据库定义了一个便于使用的别名。
+
+而 [sql/import_chips.sql](sql/import_chips.sql) 主要完成两件事
+
+1. 使用 `CREATE TABLE` 创建表
+
+    ```sql
+    CREATE TABLE db.chips (
+        prof TEXT NOT NULL,
+        chip_type TEXT NOT NULL,
+        count INTEGER NOT NULL,
+        UNIQUE (prof, chip_type)
+    );
+    ```
+
+    其中 `db.chips` 表示 `db` 下的数据库表；`TEXT` 和 `INTEGER` 是定义的字段类型；`NOT NULL` 和 `UNIQUE` 是定义的约束，`NOT NULL` 用于阻止字段为空，`UNIQUE (prof, chip_type)` 用于保证职业和芯片类型的组合不会重复。
+
+2. 使用 `INSERT INTO` 将数据写入表
+
+    ```sql
+    INSERT INTO db.chips (prof, chip_type, count)
+    SELECT
+        prof::TEXT,
+        chip_type::TEXT,
+        count::INTEGER
+    FROM file;
+    ```
+
+    其中 `(prof, chip_type, count)` 指定目标字段及其写入顺序，如果省略，那就默认为全部字段，并使用创建表时字段的定义顺序；`::TEXT` 和 `::INTEGER` 用于显式转换字段类型，如果值无法转换为目标类型，语句会报错并终止。
+
+另外，还可以在创建表前使用 `DROP TABLE IF EXISTS` 删除已经存在的表
+
+```sql
+DROP TABLE IF EXISTS db.chips;
+```
+
+不过这么做有一点风险：如果数据库中的数据已经被更新但还未导出，那么再次导入时这些数据就丢失了。不过我们始终将 CSV 作为权威数据源，而 DB 只是临时数据，所以这么做是合适的。
+
+### DB 导出 CSV
+
+我们也可以直接在数据库上进行查询，方法和在 CSV 文件上进行查询一样，唯一的不同是 `FROM file` 要改为 `FROM chips`
+
+```sh
+duckdb data/data.db -c "SELECT * FROM chips"
+```
+
+然后，查询的结果可以重新导出为 CSV 文件
+
+```sh
+duckdb data/data.db --csv -c "SELECT * FROM chips" > data/chips.csv
+```
 
 ## 更新数据
