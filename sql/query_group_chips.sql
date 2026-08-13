@@ -8,5 +8,6 @@ SELECT
     END AS 组合,
     SUM(数量) AS 总数
 FROM file
+WHERE "芯片类型" = getvariable('chip_type')
 GROUP BY 组合, 芯片类型
 ORDER BY 总数 DESC;

@@ -7,54 +7,82 @@ default:
     @just --list
 
 # 预览数据
-preview limit="10":
-    duckdb "{{ DEPOT_CSV }}" -c "SELECT * FROM file LIMIT {{ limit }}"
+preview-depot limit="10":
+    duckdb "{{ DEPOT_CSV }}" \
+        -cmd "SET VARIABLE row_limit = {{ limit }}" \
+        -f sql/preview_depot.sql
 
 # 提取芯片数据
 extract-chips:
-    duckdb -csv -f sql/extract_chips.sql "{{ DEPOT_CSV }}" > "{{ CHIPS_CSV }}"
+    duckdb "{{ DEPOT_CSV }}" -csv \
+        -f sql/extract_chips.sql > "{{ CHIPS_CSV }}"
 
-# 查询原始芯片数据
+# 查询原始的芯片数据
 query-raw-chips type:
-    duckdb "{{ CHIPS_CSV }}" -c "SELECT * FROM file WHERE 芯片类型 = '{{ type }}' ORDER BY 数量 DESC"
+    duckdb "{{ CHIPS_CSV }}" \
+        -cmd "SET VARIABLE chip_type = '{{ type }}'" \
+        -f sql/query_raw_chips.sql
 
-# 查询分组的芯片
-query-group-chips:
-    duckdb "{{ CHIPS_CSV }}" -f sql/query_group_chips.sql
+# 查询分组的芯片数据
+query-group-chips type:
+    duckdb "{{ CHIPS_CSV }}" \
+        -cmd "SET VARIABLE chip_type = '{{ type }}'" \
+        -f sql/query_group_chips.sql
 
-# 查询短缺的芯片
-query-short-chips:
-    duckdb "{{ CHIPS_CSV }}" -f sql/query_short_chips.sql
+# 查询短缺的芯片数据
+query-shortage-chips:
+    duckdb "{{ CHIPS_CSV }}" -f sql/query_shortage_chips.sql
 
 # 导入仓库数据
 import-depot:
-    duckdb "{{ DEPOT_CSV }}" -cmd "ATTACH '{{ DB }}' AS db" -f sql/import_depot.sql
+    duckdb "{{ DEPOT_CSV }}" \
+        -cmd "ATTACH '{{ DB }}' AS db" \
+        -f sql/import_depot.sql
 
 # 导出仓库数据
 export-depot:
-    duckdb -csv "{{ DB }}" -c "SELECT * FROM depot" > "{{ DEPOT_CSV }}"
+    duckdb "{{ DB }}" -csv \
+        -f sql/export_depot.sql > "{{ DEPOT_CSV }}"
 
 # 导入芯片数据
 import-chips:
-    duckdb "{{ CHIPS_CSV }}" -cmd "ATTACH '{{ DB }}' AS db" -f sql/import_chips.sql
+    duckdb "{{ CHIPS_CSV }}" \
+        -cmd "ATTACH '{{ DB }}' AS db" \
+        -f sql/import_chips.sql
 
 # 导出芯片数据
 export-chips:
-    duckdb -csv "{{ DB }}" -c "SELECT * FROM chips" > "{{ CHIPS_CSV }}"
+    duckdb "{{ DB }}" -csv \
+        -f sql/export_chips.sql > "{{ CHIPS_CSV }}"
 
 # 更新芯片数据
-update-chips job type increment:
-    duckdb "{{ DB }}" -c "UPDATE chips SET 数量 = 数量 + {{ increment }} WHERE 职业 = '{{ job }}' AND 芯片类型 = '{{ type }}'"
-    duckdb "{{ DB }}" -c "SELECT * FROM chips WHERE 职业 = '{{ job }}' AND 芯片类型 = '{{ type }}'"
+update-chips prof chip_type increment:
+    duckdb "{{ DB }}" \
+        -cmd "SET VARIABLE prof = '{{ prof }}'" \
+        -cmd "SET VARIABLE chip_type = '{{ chip_type }}'" \
+        -cmd "SET VARIABLE increment = {{ increment }}" \
+        -f sql/update_chips.sql
+    duckdb "{{ DB }}" \
+        -cmd "SET VARIABLE prof = '{{ prof }}'" \
+        -cmd "SET VARIABLE chip_type = '{{ chip_type }}'" \
+        -f sql/query_chips.sql
 
 # 在 DB 上查询原始芯片数据
-query-raw-chips-db type:
-    duckdb "{{ DB }}" -c "SELECT * FROM chips WHERE 芯片类型 = '{{ type }}' ORDER BY 数量 DESC"
+query-raw-chips-db chip_type:
+    duckdb "{{ DB }}" \
+        -cmd "CREATE TEMP VIEW file AS SELECT * FROM chips" \
+        -cmd "SET VARIABLE chip_type = '{{ chip_type }}'" \
+        -f sql/query_raw_chips.sql
 
 # 在 DB 上查询分组的芯片
-query-group-chips-db:
-    duckdb "{{ DB }}" -cmd "CREATE TEMP VIEW file AS SELECT * FROM chips" -f sql/query_group_chips.sql
+query-group-chips-db chip_type:
+    duckdb "{{ DB }}" \
+        -cmd "CREATE TEMP VIEW file AS SELECT * FROM chips" \
+        -cmd "SET VARIABLE chip_type = '{{ chip_type }}'" \
+        -f sql/query_group_chips.sql
 
 # 在 DB 上查询短缺的芯片
-query-short-chips-db:
-    duckdb "{{ DB }}" -cmd "CREATE TEMP VIEW file AS SELECT * FROM chips" -f sql/query_short_chips.sql
+query-shortage-chips-db:
+    duckdb "{{ DB }}" \
+        -cmd "CREATE TEMP VIEW file AS SELECT * FROM chips" \
+        -f sql/query_shortage_chips.sql
