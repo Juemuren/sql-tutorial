@@ -391,46 +391,51 @@ chip_types (chip_type, name_suffix, type_sort) AS (
 
 这里用到的关键字有
 
-- `WITH` 用于定义只在当前语句中使用的公用表表达式，多个表达式之间使用逗号分隔。
-- `VALUES` 用于从显式给出的数据行中创建一张临时表
-- `AS` 用于将表名和列名绑定到临时表上
+- `WITH` 用于定义只在当前语句中使用的公用表表达式，多个表达式之间使用逗号分隔
+- `VALUES` 用于从显式给出的数据行中构造查询结果
+- `AS` 用于关联公用表表达式的名称、列名和定义它的查询
 
-#### 生成组合并关联数据
+#### 计算笛卡尔积
 
-接下来生成职业和芯片类型的所有组合，再根据完整的物品名称关联仓库数据
+接下来生成所有职业和芯片类型的组合
 
 ```sql
 FROM profs
 CROSS JOIN chip_types
-LEFT JOIN file
-    ON file."Name" = profs.prof || chip_types.name_suffix
 ```
 
-其中
+`FROM profs CROSS JOIN chip_types` 会计算笛卡尔积，即把每种职业和每种芯片类型进行组合。`8` 种职业乘以 `3` 种芯片类型，一共得到 `24` 条数据。
 
-- `FROM profs CROSS JOIN chip_types` 会把每个职业和每种芯片类型进行组合，即笛卡尔积。`8` 种职业乘以 `3` 种芯片类型，一共得到 `24` 条数据
-- `LEFT JOIN file ON file."Name" = profs.prof || chip_types.name_suffix` 用于将数据关联到名称匹配的 `file` 表行，其中 `||` 用于连接两个字符串。并且，即使部分组合无法在 `file` 表中找到记录，`LEFT JOIN` 也会让左侧生成的所有组合被保留，此时 `file."Count"` 为 `NULL`。
+#### 相关标量子查询
 
-#### 整理数量并分组排序
-
-最后选择需要输出的字段，并对结果进行分组、补零和排序
+最后查询仓库中对应的物品数量，并按之前定义的顺序进行排序
 
 ```sql
 SELECT
     profs.prof,
     chip_types.chip_type,
-    coalesce(max(file."Count"), 0) AS count
-GROUP BY
-    profs.prof_sort,
-    profs.prof,
-    chip_types.type_sort,
-    chip_types.chip_type
+    coalesce(
+        (
+            SELECT file."Count"
+            FROM file
+            WHERE file."Name" = profs.prof || chip_types.name_suffix
+        ),
+        0
+    ) AS count
 ORDER BY profs.prof_sort, chip_types.type_sort;
 ```
 
-对于 `coalesce(max(file."Count"), 0) AS count` 语句
+其中
 
-- `max()` 会保留最大值。因此，如果仓库中存在同名记录，会取 `file."Count"` 中的最大值；如果需要累加，可以改为 `sum()`。对于仓库中不存在的物品，`max(...)` 的结果仍然为 `NULL`
-- `coalesce()` 从左到右返回第一个不是 `NULL` 的值。这样 `max()` 返回的 `NULL` 就被 `coalesce(..., 0)` 替换为了 `0`
+- `||` 用于连接字符串
+- `coalesce()` 返回参数中第一个不是 `NULL` 的值
 
-而 `GROUP BY` 按职业和芯片类型分组，使每种职业和芯片类型只输出一行；而重复记录已由 `max()` 等聚合函数处理为一条记录。
+括号中的 `SELECT` 是一个相关标量子查询，它引用外层查询当前行的 `profs.prof` 和 `chip_types.name_suffix`，将二者连接成完整的物品名称，再从 `file` 中查询数量。
+
+标量子查询最多只能返回一个值，因此会出现三种情况
+
+1. 仓库中存在一条对应记录，此时返回该记录的 `file."Count"`
+2. 仓库中不存在对应记录，此时返回 `NULL`，再由 `coalesce(..., 0)` 将其替换为 `0`
+3. 仓库中存在多条对应记录，此时相关标量子查询会报错，从而暴露出仓库中存在的重复数据
+
+从语义上说，本示例中的仓库数据不应该有重复，所以选择相关标量子查询是合适的。

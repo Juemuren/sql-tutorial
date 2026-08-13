@@ -18,6 +18,8 @@ chip_types (chip_type, name_suffix, type_sort) AS (
     ('双', '双芯片', 3)
 )
 
+FROM profs
+CROSS JOIN chip_types
 SELECT
     profs.prof,
     chip_types.chip_type,
@@ -29,6 +31,4 @@ SELECT
         ),
         0
     ) AS count
-FROM profs
-CROSS JOIN chip_types
 ORDER BY profs.prof_sort, chip_types.type_sort;
