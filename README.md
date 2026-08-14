@@ -503,9 +503,9 @@ SELECT
     chip_types.chip_type,
     coalesce(
         (
-            SELECT file."Count"
+            SELECT file.count
             FROM file
-            WHERE file."Name" = profs.prof || chip_types.name_suffix
+            WHERE file.name = profs.prof || chip_types.name_suffix
         ),
         0
     ) AS count
@@ -521,7 +521,7 @@ ORDER BY profs.prof_sort, chip_types.type_sort;
 
 标量子查询最多只能返回一个值，因此会出现三种情况
 
-1. 仓库中存在一条对应记录，此时返回该记录的 `file."Count"`
+1. 仓库中存在一条对应记录，此时返回该记录的 `file.count`
 2. 仓库中不存在对应记录，此时返回 `NULL`，再由 `coalesce(..., 0)` 将其替换为 `0`
 3. 仓库中存在多条对应记录，此时相关标量子查询会报错，从而暴露出仓库中存在的重复数据
 

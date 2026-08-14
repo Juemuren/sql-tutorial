@@ -26,9 +26,9 @@ SELECT
     chip_types.chip_type,
     coalesce(
         (
-            SELECT file."Count"
+            SELECT file.count
             FROM file
-            WHERE file."Name" = profs.prof || chip_types.name_suffix
+            WHERE file.name = profs.prof || chip_types.name_suffix
         ),
         0
     ) AS count
