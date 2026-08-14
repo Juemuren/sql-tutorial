@@ -6,6 +6,7 @@
 
 ## 目录
 
+- [数据准备](#数据准备)
 - [简单查询](#简单查询)
 - [过滤和排序](#过滤和排序)
 - [脚本和变量](#脚本和变量)
@@ -278,7 +279,7 @@ duckdb data/chips.csv \
 
     其中 `(prof, chip_type, count)` 指定目标字段及其写入顺序，如果省略，那就默认为全部字段，并使用创建表时字段的定义顺序；`::TEXT` 和 `::INTEGER` 用于显式转换字段类型，如果值无法转换为目标类型，语句会报错并终止。
 
-另外，还可以在创建表前使用 `DROP TABLE IF EXISTS` 删除已经存在的表
+脚本还在创建表前使用 `DROP TABLE IF EXISTS` 删除已经存在的同名表
 
 ```sql
 DROP TABLE IF EXISTS db.chips;
