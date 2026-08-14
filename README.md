@@ -83,6 +83,12 @@ duckdb data/depot.csv -c "SELECT * FROM file WHERE name LIKE '先锋%'"
 duckdb data/depot.csv -c "SELECT * FROM file WHERE name LIKE '%芯片组'"
 ```
 
+而 `LIKE '%芯片%'` 表示匹配所有包含 `芯片` 的字符串
+
+```sh
+duckdb data/depot.csv -c "SELECT * FROM file WHERE name LIKE '%芯片%'"
+```
+
 ### 排序
 
 排序使用 `ORDER BY`
@@ -185,7 +191,7 @@ $env:filter='%芯片'; duckdb data/depot.csv -f sql/query_chips.sql
 ```
 
 > [!caution]
-> 目前在 Windows 上使用原生 DuckDB CLI 时，环境变量中如果包含中文等非 ASCII 字符，`getenv()` 读取时可能出现编码错误。此时建议改用 `SET VARIABLE` 和 `getvariable()`。
+> 目前在 Windows 上使用原生 DuckDB CLI 时，如果环境变量里有中文等非 ASCII 字符，那么 `getenv()` 可能出现编码错误。此时建议改用 `SET VARIABLE` 和 `getvariable()`。
 
 ### 内置变量
 
@@ -224,7 +230,7 @@ duckdb --csv -c "SELECT * FROM duckdb_settings()" > duckdb.csv
 
 之前我们一直在 `data/depot.csv` 上查询，每次都得进行过滤。其实我们也可以把需要的数据导出到另一个文件中，从而方便后续的查询。
 
-游戏内有八种职业，分别为 `先锋`、`辅助`、`狙击`、`术师`、`近卫`、`特种`、`重装`、`医疗`；每种职业又有三种芯片，分别为 `xx芯片`、`xx芯片组`、`xx双芯片`（后文将其简称为小芯片、大芯片、双芯片）。因此，我们的目标是把芯片数据导出为如下的 CSV 格式
+游戏内有八种职业，分别为 `先锋`、`辅助`、`狙击`、`术师`、`近卫`、`特种`、`重装`、`医疗`；每种职业又有三种芯片，分别为 `%芯片`、`%芯片组`、`%双芯片`。因此，我们的目标是把芯片数据导出为如下的 CSV 格式（小芯片指 `%芯片`，大芯片指 `%芯片组`）
 
 ```csv
 prof,chip_type,count
@@ -315,7 +321,7 @@ duckdb data/data.db -c "SELECT * FROM chips"
 duckdb data/data.db --csv -c "SELECT * FROM chips" > data/chips.csv
 ```
 
-另外，如果 SQL 脚本中已经硬编码了 `FROM file`，但希望复用相同的查询逻辑，那么可以通过 `CREATE TEMP VIEW file AS SELECT * FROM chips` 从 `chips` 表中创建一个名为 `file` 的临时视图，并通过 `-cmd` 参数让其在执行查询前先运行
+另外，如果 SQL 脚本中已经硬编码了 `FROM file`，但希望复用相同的查询逻辑，那么可以通过 `CREATE TEMP VIEW file AS SELECT * FROM chips` 从 `chips` 表中创建一个名为 `file` 的临时视图，并通过 `-cmd` 参数让其在查询前先运行
 
 ```sh
 duckdb data/data.db \
