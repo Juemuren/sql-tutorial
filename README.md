@@ -363,19 +363,91 @@ duckdb data/data.db \
 
 ## 复杂查询
 
-<!-- TODO 补完整 -->
+### 组合条件
 
-过滤条件可以进行组合
+查询条件可以通过 `AND` 和 `OR` 进行组合
+
+- 使用 `AND` 表示同时满足多个条件
+
+    ```sql
+    WHERE prof = '先锋' AND chip_type = '小'
+    ```
+
+- 使用 `OR` 表示只需满足其中一个条件
+
+    ```sql
+    WHERE count < 5 OR count > 20
+    ```
+
+- `AND` 和 `OR` 还可以进行复合，使用括号来明确条件的组合方式
+
+    ```sql
+    WHERE
+        (chip_type = '小' AND count < 5)
+        OR (chip_type = '大' AND count < 8)
+    ```
+
+### 子查询
+
+游戏内精一一个六星干员需要 `5` 个小芯片，精二一个六星干员需要 `4` 个双芯片，而每个双芯片需要 `2` 个大芯片进行合成。因此，如果我们想知道哪个职业的新六星无法立即精二，可以使用如下的查询
 
 ```sql
-WHERE prof = '先锋' AND chip_type = '小'
+SELECT chips.*
+FROM file AS chips
+WHERE
+    (chips.chip_type = '小' AND chips.count < 5)
+    OR (
+        chips.chip_type = '大'
+        AND chips.count + (
+            SELECT dual_chips.count * 2
+            FROM file AS dual_chips
+            WHERE
+                dual_chips.prof = chips.prof
+                AND dual_chips.chip_type = '双'
+        ) < 8
+    )
+ORDER BY chips.count DESC;
 ```
 
-效果是选取先锋的小芯片
+括号中的 `SELECT` 是一个相关标量子查询，目的是把一个双芯片折算为两个大芯片
 
-```sh
-duckdb data/chips.csv -c "SELECT * FROM file WHERE prof = '先锋' AND chip_type = '小'"
+```sql
+SELECT dual_chips.count * 2
+FROM file AS dual_chips
+WHERE
+    dual_chips.prof = chips.prof
+    AND dual_chips.chip_type = '双'
 ```
+
+这里为了区分内外层读取的 `file` 表，两个 `FROM file` 都使用 `AS` 添加了别名。
+
+### 分组和汇总
+
+游戏内的每个芯片副本都可能掉落两种职业芯片，并且这两种芯片之间可以互相转换。因此，如果我们想知道分组后的芯片数量是多少，可以使用如下的查询
+
+```sql
+SELECT
+    chip_type,
+    CASE
+        WHEN prof IN ('先锋', '辅助') THEN '先锋 + 辅助'
+        WHEN prof IN ('狙击', '术师') THEN '狙击 + 术师'
+        WHEN prof IN ('近卫', '特种') THEN '近卫 + 特种'
+        WHEN prof IN ('重装', '医疗') THEN '重装 + 医疗'
+    END AS prof_group,
+    sum(count) AS group_count
+FROM file
+WHERE chip_type = getvariable('chip_type')
+GROUP BY prof_group, chip_type
+ORDER BY group_count DESC;
+```
+
+其中
+
+- `CASE` 依次检查各个 `WHEN` 条件
+- `IN` 用于判断值是否属于给定的集合
+- `THEN` 用于返回对应的分组名称
+- `sum(count)` 是聚合函数，用于计算每组的 `count` 总和
+- `GROUP BY` 将 `prof_group` 和 `chip_type` 相同的数据放入同一组
 
 ## 数据转换
 
