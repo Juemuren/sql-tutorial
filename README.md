@@ -2,7 +2,7 @@
 
 本项目学习如何使用 SQL 进行结构化数据处理。
 
-用到的工具为 Bash 和 DuckDB。如果可以，最好也安装一下 Just。
+用到的工具为 DuckDB。如果可以，最好也安装一下 Just。
 
 ## 目录
 
@@ -169,11 +169,22 @@ WHERE name LIKE getenv('filter')
 ORDER BY count
 ```
 
-而定义环境变量的方式由使用的 Shell 决定。在 Bash 里通过 `filter="'%芯片'"` 定义环境变量
+而定义环境变量的方式由使用的 Shell 决定。
 
-```sh
-filter="'%芯片'" duckdb data/depot.csv -f sql/query_chips.sql
+在 Bash 里可以通过 `filter='%芯片'` 定义环境变量
+
+```bash
+filter='%芯片' duckdb data/depot.csv -f sql/query_chips.sql
 ```
+
+在 Pwsh 里可以通过 `$env:filter='%芯片'` 定义环境变量
+
+```pwsh
+$env:filter='%芯片'; duckdb data/depot.csv -f sql/query_chips.sql
+```
+
+> [!caution]
+> 目前在 Windows 上使用原生 DuckDB CLI 时，环境变量中如果包含中文等非 ASCII 字符，`getenv()` 读取时可能出现编码错误。此时建议改用 `SET VARIABLE` 和 `getvariable()`。
 
 ### 内置变量
 
