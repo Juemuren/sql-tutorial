@@ -1,3 +1,4 @@
+-- noqa: disable=LT02
 WITH
 profs (prof, prof_sort) AS (
     VALUES
