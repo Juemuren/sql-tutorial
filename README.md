@@ -14,6 +14,7 @@
 - [更新](#更新)
 - [复杂查询](#复杂查询)
 - [数据转换](#数据转换)
+- [事务](#事务)
 
 本文使用的操作都在 [Justfile](Justfile) 中提供了对应的快捷命令。
 
@@ -538,3 +539,33 @@ ORDER BY profs.prof_sort, chip_types.type_sort;
 3. 仓库中存在多条对应记录，此时相关标量子查询会报错，从而暴露出仓库中存在的重复数据
 
 从语义上说，本示例中的仓库数据不应该有重复，所以选择相关标量子查询是合适的。
+
+## 事务
+
+在将 CSV 导入数据库的章节，我们做了一件很有争议的事情：在创建新表前删除旧表。如果在导入的过程中发生了错误，那么这可能会产生一些意外结果——比如数据库被清空了。虽然 CSV 文件仍然完好，我们可以重新导入，但发生这种事情终究是不好的。
+
+我们可以使用事务避免这一情况。事务中的语句要么全部成功并通过 `COMMIT` 提交，要么在发生错误后通过 `ROLLBACK` 撤销。例如，可以把删除、创建和导入放在同一个事务中
+
+```sql
+BEGIN TRANSACTION;
+
+DROP TABLE IF EXISTS db.chips;
+
+CREATE TABLE db.chips (
+    prof TEXT NOT NULL,
+    chip_type TEXT NOT NULL,
+    count INTEGER NOT NULL,
+    UNIQUE (prof, chip_type)
+);
+
+INSERT INTO db.chips (prof, chip_type, count)
+SELECT
+    prof::TEXT,
+    chip_type::TEXT,
+    count::INTEGER
+FROM file;
+
+COMMIT;
+```
+
+用 CLI 执行脚本时，未提交的事务会在连接因错误关闭后自动回滚；在交互式会话里则需要显式执行 `ROLLBACK`。这样，如果创建表或导入数据失败，可以回滚整个事务，避免发生旧表已被删除而新表未正确写入的情况。
