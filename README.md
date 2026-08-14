@@ -1,6 +1,6 @@
 # 结构化数据处理
 
-一个用于学习基于 SQL 进行结构化数据处理的项目。
+本项目学习如何使用 SQL 进行结构化数据处理。
 
 用到的工具为 Bash 和 DuckDB。如果可以，最好也安装一下 Just。
 
@@ -20,7 +20,7 @@
 
 数据源于《明日方舟》的仓库，使用 MAA 的 `小工具 > 仓库识别` 功能将仓库中的数据导出为 CSV 文件。
 
-示例文件为 [data/depot.sample.csv](data/depot.sample.csv)。不建议直接修改这份示例文件。请拷贝一份用于后续的修改。
+示例文件为 [data/depot.sample.csv](data/depot.sample.csv)。不建议直接修改这份示例文件，请拷贝一份用于后续的教程。
 
 ```sh
 cp data/depot.sample.csv data/depot.csv
@@ -37,7 +37,7 @@ FROM file
 
 其中 `SELECT *` 表示选取所有字段，`FROM file` 表示从给定的文件中读取。
 
-DuckDB 可以在命令中指定文件。完整的命令为
+DuckDB 可以在命令中指定文件
 
 ```sh
 duckdb data/depot.csv -c "SELECT * FROM file"
@@ -318,7 +318,7 @@ DuckDB 不方便直接在 CSV 文件上进行更新，因为一边读文件一�
 1. 先读 CSV 文件，然后把更新结果写入另一个 CSV 文件，最后再进行覆盖
 2. 先将 CSV 文件导入 DuckDB 数据库，然后在数据库里进行更新，最后再把数据库中的数据导出为 CSV 文件
 
-我们采用第二种方式（此前学习如何将 CSV 导入数据库就是为了讲解第二种方式的）。
+我们采用第二种方式（上一节讲的导入和导出就是为了第二种方式准备的）。
 
 更新使用 `UPDATE`
 
@@ -419,11 +419,11 @@ WHERE
     AND dual_chips.chip_type = '双'
 ```
 
-这里为了区分内外层读取的 `file` 表，两个 `FROM file` 都使用 `AS` 添加了别名。
+这里为了区分内外层读取的 `file` 表，两个 `FROM file` 都使用 `AS` 添加了别名：`dual_chips` 是内层的表，`chips` 是外层的表。而 `dual_chips.prof = chips.prof AND dual_chips.chip_type = '双'` 就是找到同职业的双芯片，然后 `SELECT dual_chips.count * 2` 将其数量翻倍返回给外层查询。
 
-### 分组和汇总
+### 分组和聚合
 
-游戏内的每个芯片副本都可能掉落两种职业芯片，并且这两种芯片之间可以互相转换。因此，如果我们想知道分组后的芯片数量是多少，可以使用如下的查询
+游戏内的每个芯片副本都可能掉落两种职业的芯片，并且这两种芯片之间可以互相转换。因此，如果我们想知道分组后的芯片数量是多少，可以使用如下的查询
 
 ```sql
 SELECT
