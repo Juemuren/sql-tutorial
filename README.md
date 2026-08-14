@@ -1,4 +1,4 @@
-# 结构化数据处理
+# SQL 简易教程
 
 本项目学习如何使用 SQL 进行结构化数据处理。
 
@@ -243,7 +243,7 @@ prof,chip_type,count
 ...
 ```
 
-提取和整理芯片数据的脚本保存在 [sql/extract_chips.sql](sql/extract_chips.sql) 中。该脚本较为复杂，后续再深入研究。
+提取和整理芯片数据的脚本保存在 [sql/extract_chips.sql](sql/extract_chips.sql) 中。该脚本较为复杂，[后续](#数据转换) 再深入研究。
 
 使用 `--csv` 让 DuckDB 以 CSV 格式输出查询结果，再使用 Shell 的 `>` 将输出重定向到文件
 
