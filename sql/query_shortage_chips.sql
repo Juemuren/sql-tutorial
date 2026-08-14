@@ -1,7 +1,15 @@
-SELECT *
-FROM file
+SELECT chips.*
+FROM file AS chips
 WHERE
-    (chip_type = '小' AND count < 5)
-    OR
-    (chip_type = '大' AND count < 8)
-ORDER BY count DESC;
+    (chips.chip_type = '小' AND chips.count < 5)
+    OR (
+        chips.chip_type = '大'
+        AND chips.count + (
+            SELECT dual_chips.count * 2
+            FROM file AS dual_chips
+            WHERE
+                dual_chips.prof = chips.prof
+                AND dual_chips.chip_type = '双'
+        ) < 8
+    )
+ORDER BY chips.count DESC;
