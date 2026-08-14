@@ -387,39 +387,34 @@ duckdb data/data.db \
         OR (chip_type = '大' AND count < 8)
     ```
 
-### 子查询
+### 条件表达式
 
 游戏内精一一个六星干员需要 `5` 个小芯片，精二一个六星干员需要 `4` 个双芯片，而每个双芯片需要 `2` 个大芯片进行合成。因此，如果我们想知道哪个职业的新六星无法立即精二，可以使用如下的查询
 
 ```sql
-SELECT chips.*
-FROM file AS chips
-WHERE
-    (chips.chip_type = '小' AND chips.count < 5)
-    OR (
-        chips.chip_type = '大'
-        AND chips.count + (
-            SELECT dual_chips.count * 2
-            FROM file AS dual_chips
-            WHERE
-                dual_chips.prof = chips.prof
-                AND dual_chips.chip_type = '双'
-        ) < 8
-    )
-ORDER BY chips.count DESC;
+SELECT
+    prof,
+    CASE chip_type
+        WHEN '双' THEN '大' ELSE chip_type
+    END AS converted_chip_type,
+    sum(
+        count * CASE chip_type
+            WHEN '双' THEN 2 ELSE 1
+        END
+    ) AS converted_count
+FROM file
+GROUP BY prof, converted_chip_type
+HAVING
+    (converted_chip_type = '小' AND converted_count < 5)
+    OR (converted_chip_type = '大' AND converted_count < 8)
 ```
 
-括号中的 `SELECT` 是一个相关标量子查询，目的是把一个双芯片折算为两个大芯片
+其中
 
-```sql
-SELECT dual_chips.count * 2
-FROM file AS dual_chips
-WHERE
-    dual_chips.prof = chips.prof
-    AND dual_chips.chip_type = '双'
-```
-
-这里为了区分内外层读取的 `file` 表，两个 `FROM file` 都使用 `AS` 添加了别名：`dual_chips` 是内层的表，`chips` 是外层的表。而 `dual_chips.prof = chips.prof AND dual_chips.chip_type = '双'` 就是找到同职业的双芯片，然后 `SELECT dual_chips.count * 2` 将其数量翻倍返回给外层查询。
+- `CASE` 是条件表达式，当值匹配 `WHEN` 时返回 `THEN`，否则返回 `ELSE`。第一个 `CASE` 将类型 `双` 转为 `大`，第二个 `CASE` 将双芯片的数量折算为大芯片的数量
+- `sum()` 是聚合函数，将折算后的双芯片数量加到大芯片数量上
+- `GROUP BY` 将 `prof` 和 `converted_chip_type` 相同的数据放入同一组
+- `HAVING` 用于筛选聚合后的数据
 
 ### 分组和聚合
 
@@ -446,7 +441,7 @@ ORDER BY group_count DESC;
 - `CASE` 依次检查各个 `WHEN` 条件
 - `IN` 用于判断值是否属于给定的集合
 - `THEN` 用于返回对应的分组名称
-- `sum(count)` 是聚合函数，用于计算每组的 `count` 总和
+- `sum()` 是聚合函数，用于计算每组的 `count` 总和
 - `GROUP BY` 将 `prof_group` 和 `chip_type` 相同的数据放入同一组
 
 ## 数据转换
@@ -498,7 +493,7 @@ CROSS JOIN chip_types
 
 `FROM profs CROSS JOIN chip_types` 会计算笛卡尔积，即把每种职业和每种芯片类型进行组合。`8` 种职业乘以 `3` 种芯片类型，一共得到 `24` 条数据。
 
-### 相关标量子查询
+### 进行相关标量子查询
 
 最后查询仓库中对应的物品数量，并按之前定义的顺序进行排序
 
