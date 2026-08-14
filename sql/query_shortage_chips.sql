@@ -1,15 +1,15 @@
-SELECT chips.*
-FROM file AS chips
-WHERE
-    (chips.chip_type = '小' AND chips.count < 5)
-    OR (
-        chips.chip_type = '大'
-        AND chips.count + (
-            SELECT dual_chips.count * 2
-            FROM file AS dual_chips
-            WHERE
-                dual_chips.prof = chips.prof
-                AND dual_chips.chip_type = '双'
-        ) < 8
-    )
-ORDER BY chips.count DESC;
+SELECT
+    prof,
+    CASE chip_type
+        WHEN '双' THEN '大' ELSE chip_type
+    END AS converted_chip_type,
+    sum(
+        count * CASE chip_type
+            WHEN '双' THEN 2 ELSE 1
+        END
+    ) AS converted_count
+FROM file
+GROUP BY prof, converted_chip_type
+HAVING
+    (converted_chip_type = '小' AND converted_count < 5)
+    OR (converted_chip_type = '大' AND converted_count < 8)
